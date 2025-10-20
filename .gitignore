@@ -1,0 +1,50 @@
+# WordPress
+.htaccess
+wp-config.php
+wp-content/uploads/
+wp-content/blogs.dir/
+wp-content/upgrade/
+wp-content/backup-db/
+wp-content/advanced-cache.php
+wp-content/wp-cache-config.php
+wp-content/cache/
+wp-content/cache/supercache/
+
+# Theme specific
+*.log
+.DS_Store
+Thumbs.db
+.cache
+.tmp
+node_modules/
+*.sass-cache
+*.scssc
+
+# IDE
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+.project
+.settings/
+
+# OS Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Desktop.ini
+
+# Build files
+/dist/
+/build/
+*.min.css.map
+*.min.js.map
+
+# Development
+npm-debug.log
+yarn-error.log
+.env
+.env.local
