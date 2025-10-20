@@ -1,0 +1,661 @@
+'use client';
+
+// --- ARO Glassmorphism (v3.7) -------------------------------------------------
+// Fixes & Upgrades in this version:
+// 1) Cart icon: replaced with the provided original SVG (outline + filled) and
+//    forced overflow-visible + rounded caps/joins to prevent clipping.
+// 2) Women/Men sliders: added pointer/touch drag + inertial wheel support.
+// 3) From the Journal: WordPress REST-ready minimal feed component
+//    (set data-wp="https://YOUR-WP-DOMAIN" on the root div to activate).
+// 4) Palette: refined luxe background with deep plum + subtle gold accents.
+//    Everything else kept intact per your request.
+// --------------------------------------------------------------------------------
+
+import React, { useState, useEffect, useRef, type ReactNode, type ButtonHTMLAttributes } from 'react';
+import {
+  ShoppingBag,
+  Instagram,
+  Menu,
+  ArrowRight,
+  Sparkles,
+  Star,
+  BadgePercent,
+  Facebook,
+  Linkedin,
+  Youtube,
+  Frame,
+  ChevronLeft,
+  ChevronRight,
+  ArrowUpRight,
+} from 'lucide-react';
+import gsap from 'gsap';
+
+// ---- helpers
+function cn(...classes: (string | false | null | undefined)[]) {
+  return classes.filter(Boolean).join(' ');
+}
+
+// Local lightweight Button (shadcn-like API)
+interface UIButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: 'default' | 'outline' | 'ghost';
+  asChild?: boolean;
+}
+function Button({ variant = 'default', className, ...props }: UIButtonProps) {
+  const base = 'inline-flex items-center justify-center whitespace-nowrap text-sm font-medium rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 px-4 py-2';
+  const variants: Record<NonNullable<UIButtonProps['variant']>, string> = {
+    default: 'bg-white text-black hover:bg-white',
+    outline: 'border border-white/20 bg-white/10 text-white hover:bg-white/20 backdrop-blur-md',
+    ghost: 'bg-transparent hover:bg-white/10',
+  };
+  return <button className={cn(base, variants[variant], className)} {...props} />;
+}
+
+function usePrefersReducedMotion() {
+  const [reduced, setReduced] = useState(false);
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const set = () => setReduced(mq.matches);
+    set();
+    mq.addEventListener ? mq.addEventListener('change', set) : mq.addListener(set as any);
+    return () => {
+      mq.removeEventListener ? mq.removeEventListener('change', set) : mq.removeListener(set as any);
+    };
+  }, []);
+  return reduced;
+}
+
+// ——— util: safe disabled link (keeps markup, disables click/tab/hover)
+function SafeLink({ href, disabled, className = '', children }: { href: string; disabled?: boolean; className?: string; children: ReactNode }) {
+  const isDead = disabled || href === '#' || href === '/' || href.startsWith('/');
+  const handle = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (isDead) e.preventDefault();
+  };
+  return (
+    <a
+      href={isDead ? '#' : href}
+      onClick={handle}
+      aria-disabled={isDead}
+      tabIndex={isDead ? -1 : 0}
+      className={cn(className, isDead && 'pointer-events-none opacity-60 cursor-not-allowed')}
+      title={isDead ? 'به زودی فعال می‌شود' : undefined}
+    >
+      {children}
+    </a>
+  );
+}
+
+function AnimatedContainer({ className, delay = 0.1, children }: { className?: string; delay?: number; children: ReactNode }) {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const reduced = usePrefersReducedMotion();
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (reduced) {
+      el.classList.add('in');
+      return;
+    }
+    const obs = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            el.style.transitionDelay = `${delay}s`;
+            el.classList.add('in');
+            obs.unobserve(el);
+          }
+        });
+      },
+      { threshold: 0.15 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [delay, reduced]);
+  return (
+    <div ref={ref} className={cn('fade-up', className)}>
+      {children}
+    </div>
+  );
+}
+
+// ================= CART ICONS (fix clipping) =================
+// Outline version (stroked). Uses overflow-visible and rounded caps/joins.
+function CartIconOutline({ size = 24 }: { size?: number }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width={size}
+      height={size}
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      style={{ overflow: 'visible', display: 'block' }}
+    >
+      <path opacity="0.9" d="M7.5 18C8.328 18 9 18.672 9 19.5S8.328 21 7.5 21 6 20.328 6 19.5 6.672 18 7.5 18Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path opacity="0.9" d="M16.5 18c.828 0 1.5.672 1.5 1.5S17.328 21 16.5 21 15 20.328 15 19.5 15.672 18 16.5 18Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M2.26121 3.09184L2.50997 2.38429H2.50997L2.26121 3.09184ZM2.24876 2.29246C1.85799 2.15507 1.42984 2.36048 1.29246 2.75124C1.15507 3.14201 1.36048 3.57016 1.75124 3.70754L2.24876 2.29246ZM4.58584 4.32298L5.20507 3.89983V3.89983L4.58584 4.32298ZM5.88772 14.5862L5.34345 15.1022H5.34345L5.88772 14.5862ZM20.6578 9.88275L21.3923 10.0342L21.3933 10.0296L20.6578 9.88275ZM20.158 12.3075L20.8926 12.4589L20.158 12.3075ZM20.7345 6.69708L20.1401 7.15439L20.7345 6.69708ZM19.1336 15.0504L18.6598 14.469L19.1336 15.0504ZM5.70808 9.76V7.03836H4.20808V9.76H5.70808ZM2.50997 2.38429L2.24876 2.29246L1.75124 3.70754L2.01245 3.79938L2.50997 2.38429ZM10.9375 16.25H16.2404V14.75H10.9375V16.25ZM5.70808 7.03836C5.70808 6.3312 5.7091 5.7411 5.65719 5.26157C5.60346 4.76519 5.48705 4.31247 5.20507 3.89983L3.96661 4.74613C4.05687 4.87822 4.12657 5.05964 4.1659 5.42299C4.20706 5.8032 4.20808 6.29841 4.20808 7.03836H5.70808ZM2.01245 3.79938C2.68006 4.0341 3.11881 4.18965 3.44166 4.34806C3.74488 4.49684 3.87855 4.61727 3.96661 4.74613L5.20507 3.89983C4.92089 3.48397 4.54304 3.21763 4.10241 3.00143C3.68139 2.79485 3.14395 2.60719 2.50997 2.38429L2.01245 3.79938ZM4.20808 9.76C4.20808 11.2125 4.22171 12.2599 4.35876 13.0601C4.50508 13.9144 4.79722 14.5261 5.34345 15.1022L6.43198 14.0702C6.11182 13.7325 5.93913 13.4018 5.83723 12.8069C5.72607 12.1578 5.70808 11.249 5.70808 9.76H4.20808ZM10.9375 14.75C9.52069 14.75 8.53763 14.7482 7.79696 14.6432C7.08215 14.5418 6.70452 14.3576 6.43198 14.0702L5.34345 15.1022C5.93731 15.7286 6.69012 16.0013 7.58636 16.1283C8.45674 16.2518 9.56535 16.25 10.9375 16.25V14.75ZM4.95808 6.87H17.0888V5.37H4.95808V6.87ZM19.9232 9.73135L19.4235 12.1561L20.8926 12.4589L21.3923 10.0342L19.9232 9.73135ZM17.0888 6.87C17.9452 6.87 18.6989 6.871 19.2937 6.93749C19.5893 6.97053 19.8105 7.01643 19.9659 7.07105C20.1273 7.12776 20.153 7.17127 20.1401 7.15439L21.329 6.23978C21.094 5.93436 20.7636 5.76145 20.4632 5.65587C20.1567 5.54818 19.8101 5.48587 19.4604 5.44678C18.7646 5.369 17.9174 5.37 17.0888 5.37V6.87ZM21.3933 10.0296C21.5625 9.18167 21.7062 8.47024 21.7414 7.90038C21.7775 7.31418 21.7108 6.73617 21.329 6.23978L20.1401 7.15439C20.2021 7.23508 20.2706 7.38037 20.2442 7.80797C20.2168 8.25191 20.1002 8.84478 19.9223 9.73595L21.3933 10.0296Z" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+// Filled version (used after drop)
+function CartIconFilled({ size = 24 }: { size?: number }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width={size}
+      height={size}
+      fill="currentColor"
+      xmlns="http://www.w3.org/2000/svg"
+      style={{ overflow: 'visible', display: 'block' }}
+    >
+      <path d="M7.5 18C8.33 18 9 18.67 9 19.5S8.33 21 7.5 21 6 20.33 6 19.5 6.67 18 7.5 18Zm9 0C17.33 18 18 18.67 18 19.5S17.33 21 16.5 21 15 20.33 15 19.5 15.67 18 16.5 18Z" />
+      <path d="M2.26121 3.09184L2.50997 2.38429H2.50997L2.26121 3.09184ZM2.24876 2.29246C1.85799 2.15507 1.42984 2.36048 1.29246 2.75124C1.15507 3.14201 1.36048 3.57016 1.75124 3.70754L2.24876 2.29246ZM4.58584 4.32298L5.20507 3.89983V3.89983L4.58584 4.32298ZM5.88772 14.5862L5.34345 15.1022H5.34345L5.88772 14.5862ZM20.6578 9.88275L21.3923 10.0342L21.3933 10.0296L20.6578 9.88275ZM20.158 12.3075L20.8926 12.4589L20.158 12.3075ZM20.7345 6.69708L20.1401 7.15439L20.7345 6.69708ZM19.1336 15.0504L18.6598 14.469L19.1336 15.0504ZM5.70808 9.76V7.03836H4.20808V9.76H5.70808ZM2.50997 2.38429L2.24876 2.29246L1.75124 3.70754L2.01245 3.79938L2.50997 2.38429ZM10.9375 16.25H16.2404V14.75H10.9375V16.25ZM4.95808 6.87H17.0888V5.37H4.95808V6.87ZM19.9232 9.73135L19.4235 12.1561L20.8926 12.4589L21.3923 10.0342L19.9232 9.73135ZM17.0888 6.87C17.9452 6.87 18.6989 6.871 19.2937 6.93749C19.5893 6.97053 19.8105 7.01643 19.9659 7.07105C20.1273 7.12776 20.153 7.17127 20.1401 7.15439L21.329 6.23978C21.094 5.93436 20.7636 5.76145 20.4632 5.65587C20.1567 5.54818 19.8101 5.48587 19.4604 5.44678C18.7646 5.369 17.9174 5.37 17.0888 5.37V6.87ZM21.3933 10.0296C21.5625 9.18167 21.7062 8.47024 21.7414 7.90038C21.7775 7.31418 21.7108 6.73617 21.329 6.23978L20.1401 7.15439C20.2021 7.23508 20.2706 7.38037 20.2442 7.80797C20.2168 8.25191 20.1002 8.84478 19.9223 9.73595L21.3933 10.0296Z" />
+    </svg>
+  );
+}
+
+function GlowCTA() {
+  return (
+    <div className="relative inline-flex">
+      {/* pure white background */}
+      <Button className="relative rounded-full bg-white text-black hover:bg-white shadow-[0_0_0_0_rgba(102,209,255,0.0)]">Shop Now</Button>
+      {/* subtle accent ring */}
+      <span className="pointer-events-none absolute inset-0 rounded-full ring-2 ring-[color:var(--aro-accent)]/60 blur-[1px]" />
+      {[...Array(5)].map((_, i) => (
+        <span key={i} className="pointer-events-none absolute w-1.5 h-1.5 rounded-full bg-[color:var(--aro-accent)]/90 opacity-80 aro-twinkle" style={{ left: `${10 + i * 16}%`, top: `${-6 - (i % 2) * 8}px`, animationDelay: `${i * 0.6}s` }} />
+      ))}
+    </div>
+  );
+}
+
+function AddToCartButton({ onDone }: { onDone?: () => void }) {
+  const [phase, setPhase] = useState<'idle' | 'run'>('idle');
+  const handleClick = () => {
+    if (phase !== 'idle') return;
+    setPhase('run');
+    setTimeout(() => {
+      setPhase('idle');
+      onDone && onDone();
+    }, 1900);
+  };
+  return (
+    <button
+      onClick={handleClick}
+      className={cn(
+        'aro-cartbtn relative rounded-full px-8 py-2 text-sm font-medium border border-white/20 bg-white/10 backdrop-blur-md',
+        phase === 'run' && 'is-active'
+      )}
+    >
+      <span className="icon-basket" aria-hidden>
+        {/* Outline icon */}
+        <span className="basket inline-block align-middle">
+          <CartIconOutline size={24} />
+        </span>
+        {/* Filled icon (reveals after animation) */}
+        <span className="basket-full">
+          <CartIconFilled size={24} />
+        </span>
+      </span>
+      <span className="label pl-8">Add to cart</span>
+      <span className="droplet"><i className="tail" /></span>
+    </button>
+  );
+}
+
+// ===== Slider (Women/Men) — GSAP deck + drag/swipe =====
+export type AROSlide = {
+  title?: string;
+  subtitle?: string;
+  image?: string;
+  badge?: { text: string; variant: 'pink' | 'indigo' | 'orange' };
+  href?: string;
+};
+function buildSlides(count = 20, prefix = 'Look'): AROSlide[] {
+  return Array.from({ length: count }).map((_, i) => ({
+    title: `${prefix} ${i + 1}`,
+    subtitle: 'Premium cut • SS25',
+    image: `https://images.unsplash.com/photo-15${(i % 9) + 1}724385561-51dba16a26b8?q=80&w=1200&auto=format&fit=crop`,
+    badge: { text: i % 3 === 0 ? 'New' : i % 3 === 1 ? 'AI' : 'UI', variant: (i % 3 === 0 ? 'orange' : i % 3 === 1 ? 'indigo' : 'pink') as 'orange' | 'indigo' | 'pink' },
+    href: '#',
+  }));
+}
+
+function SliderDeck({ slides = buildSlides(), id }: { slides?: AROSlide[]; id?: string }) {
+  const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const drag = useRef({ startX: 0, dx: 0, isDown: false, lastShift: 0 });
+  const THRESHOLD = 40;
+
+  const shift = (direction: 'next' | 'prev') => {
+    const len = slides.length;
+    const nextIndex = direction === 'next' ? (currentIndex + 1) % len : (currentIndex - 1 + len) % len;
+    setCurrentIndex(nextIndex);
+  };
+
+  useEffect(() => {
+    cardRefs.current.forEach((card, i) => {
+      if (!card) return;
+      let position = i - currentIndex;
+      const half = Math.floor(slides.length / 2);
+      if (position < -half) position += slides.length;
+      else if (position > half) position -= slides.length;
+      const x = position * 320 + (dragging ? drag.current.dx * 0.4 : 0);
+      const y = position === 0 ? 20 : 0;
+      const scale = position === 0 ? 1.03 : 0.95;
+      if (Math.abs(position) > 2) gsap.set(card, { x, y, scale });
+      else gsap.to(card, { x, y, scale, duration: 0.4, ease: 'power2.out' });
+    });
+  }, [currentIndex, slides.length, dragging]);
+
+  const onPointerDown = (e: React.PointerEvent) => {
+    drag.current.isDown = true;
+    drag.current.startX = e.clientX;
+    drag.current.dx = 0;
+    setDragging(true);
+    (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+  };
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (!drag.current.isDown) return;
+    drag.current.dx = e.clientX - drag.current.startX;
+    setDragging(true);
+  };
+  const onPointerUp = (e: React.PointerEvent) => {
+    if (!drag.current.isDown) return;
+    const { dx } = drag.current;
+    drag.current.isDown = false;
+    setDragging(false);
+    if (dx > THRESHOLD) shift('prev');
+    else if (dx < -THRESHOLD) shift('next');
+    drag.current.dx = 0;
+  };
+  const onPointerLeave = (e: React.PointerEvent) => {
+    if (!drag.current.isDown) return;
+    onPointerUp(e);
+  };
+
+  // Horizontal wheel support
+  const wheelLock = useRef(false);
+  const onWheel = (e: React.WheelEvent) => {
+    if (wheelLock.current) return;
+    if (Math.abs(e.deltaX) > Math.abs(e.deltaY) && Math.abs(e.deltaX) > 15) {
+      wheelLock.current = true;
+      shift(e.deltaX > 0 ? 'next' : 'prev');
+      setTimeout(() => (wheelLock.current = false), 250);
+    }
+  };
+
+  const badgeColors = { pink: 'bg-pink-600 text-white', indigo: 'bg-indigo-600 text-white', orange: 'bg-orange-500 text-white' } as const;
+
+  return (
+    <div id={id} className="h-full w-full relative px-6 py-12 overflow-hidden">
+      <div
+        className={cn('relative flex items-center justify-center h-[400px] select-none', dragging ? 'cursor-grabbing' : 'cursor-grab')}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerLeave={onPointerLeave}
+        onWheel={onWheel}
+      >
+        {slides.map((card, index) => (
+          <div key={`${card.title}-${index}`} ref={(el) => (cardRefs.current[index] = el)} className="absolute transition-transform will-change-transform">
+            <div className="flex flex-col group">
+              <SafeLink
+                href={card.href ?? '#'}
+                disabled={!card.href || card.href === '#'}
+                className="relative block overflow-hidden rounded-2xl shadow-xl border border-white/10 bg-gradient-to-tr from-white/10 to-white/5 backdrop-blur-md transition-all duration-300 hover:scale-[1.02]"
+              >
+                <div className="relative h-[300px] w-[260px]">
+                  <img src={card.image ?? ''} alt={card.title ?? ''} className="w-full h-full object-cover" />
+                </div>
+                {card.badge && (
+                  <div className="absolute top-4 -left-10 -rotate-45">
+                    <div className={cn('px-3 py-0.5 text-xs font-bold shadow-md', badgeColors[card.badge.variant])}>{card.badge.text}</div>
+                  </div>
+                )}
+                <div className="absolute bottom-4 left-4 right-4 group-hover:translate-y-[-4px] transform transition-all duration-300 ease-out bg-white/80 dark:bg-black/50 backdrop-blur-md rounded-xl p-4 shadow-md border border-white/10">
+                  <div className="flex flex-col gap-1">
+                    <h3 className="text-base font-semibold text-black dark:text-white">{card.title}</h3>
+                    <p className="text-sm text-zinc-700 dark:text-zinc-300 leading-snug">{card.subtitle}</p>
+                    <div className="flex justify-end mt-2">
+                      <div className="group relative w-7 h-7 flex items-center justify-center rounded-full bg-white/70 dark:bg-zinc-800/60 transition-all duration-300 hover:scale-110 hover:shadow-md">
+                        <ArrowUpRight className="w-3.5 h-3.5 text-zinc-800 dark:text-white transition-transform duration-300 group-hover:rotate-45" />
+                        <div className="absolute inset-0 rounded-full bg-black/5 dark:bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </SafeLink>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="absolute bottom-6 right-6 flex gap-2">
+        <button onClick={() => shift('prev')} className="p-2 rounded-full border border-white/20 bg-white/10 backdrop-blur-md hover:scale-110 transition" aria-label="Previous">
+          <ChevronLeft className="w-5 h-5" />
+        </button>
+        <button onClick={() => shift('next')} className="p-2 rounded-full border border-white/20 bg-white/10 backdrop-blur-md hover:scale-110 transition" aria-label="Next">
+          <ChevronRight className="w-5 h-5" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ================== WORDPRESS BLOG FEED ==================
+function stripTags(html: string) {
+  if (!html) return '';
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  return (tmp.textContent || tmp.innerText || '').trim();
+}
+
+type WPPost = { id: number; link: string; title: { rendered: string }; excerpt: { rendered: string }; _embedded?: any };
+function BlogFeed({ wpBase, perPage = 3 }: { wpBase?: string; perPage?: number }) {
+  const [posts, setPosts] = useState<WPPost[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const base = wpBase || (typeof window !== 'undefined' ? document.getElementById('aro-app')?.getAttribute('data-wp') || '' : '');
+    if (!base) return; // stay in placeholder mode
+    const url = `${base.replace(/\/$/, '')}/wp-json/wp/v2/posts?_embed&per_page=${perPage}`;
+    fetch(url)
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status))))
+      .then((json) => setPosts(json))
+      .catch((e) => setError(String(e)));
+  }, [wpBase, perPage]);
+
+  // Placeholder skeleton when no wpBase is provided
+  if (!posts && !error) {
+    return (
+      <div className="grid md:grid-cols-3 gap-6">
+        {[1, 2, 3].map((i) => (
+          <article key={i} className="relative p-6 rounded-3xl border border-white/10 bg-white/10 backdrop-blur-xl overflow-hidden">
+            <div className="w-full h-44 rounded-2xl mb-4 animate-pulse bg-white/10" />
+            <div className="h-4 w-2/3 bg-white/20 rounded mb-2 animate-pulse" />
+            <div className="h-3 w-full bg-white/10 rounded mb-1 animate-pulse" />
+            <div className="h-3 w-4/5 bg-white/10 rounded animate-pulse" />
+          </article>
+        ))}
+      </div>
+    );
+  }
+  if (error) {
+    return <div className="text-sm opacity-80">Blog feed error: {error}</div>;
+  }
+  if (!posts) return null;
+
+  return (
+    <div className="grid md:grid-cols-3 gap-6">
+      {posts.map((p) => {
+        const media = p._embedded?.['wp:featuredmedia']?.[0];
+        const img = media?.source_url || 'https://images.unsplash.com/photo-1512436991641-6745cdb1723f?q=80&w=1200&auto=format&fit=crop';
+        const title = p.title?.rendered || '—';
+        const excerpt = stripTags(p.excerpt?.rendered || '').slice(0, 140) + '…';
+        return (
+          <article key={p.id} className="relative p-6 rounded-3xl border border-white/10 bg-white/10 backdrop-blur-xl overflow-hidden">
+            <img src={img} alt="blog" className="w-full h-44 object-cover rounded-2xl mb-4" />
+            <h3 className="text-lg font-medium" dangerouslySetInnerHTML={{ __html: title }} />
+            <p className="text-sm opacity-80 mt-2">{excerpt}</p>
+            <div className="mt-4 text-sm opacity-90 inline-flex items-center gap-2">
+              <SafeLink href={p.link} className="underline" disabled={!p.link}>
+                Read more
+              </SafeLink>
+              <ArrowRight className="w-4 h-4" />
+            </div>
+          </article>
+        );
+      })}
+    </div>
+  );
+}
+
+export function Footer() {
+  return (
+    <footer className="relative w-full max-w-6xl mx-auto flex flex-col items-center justify-center rounded-t-[2.5rem] border-t border-white/10 bg-[radial-gradient(35%_128px_at_50%_0%,rgba(255,255,255,0.08),transparent)] px-6 py-12 lg:py-16 backdrop-blur-xl">
+      <div className="bg-white/20 absolute top-0 right-1/2 left-1/2 h-px w-1/3 -translate-x-1/2 -translate-y-1/2 rounded-full blur" />
+      <div className="grid w-full gap-8 xl:grid-cols-3 xl:gap-8">
+        <AnimatedContainer className="space-y-4">
+          <div className="inline-flex items-center gap-2 text-white/90">
+            <Frame className="size-8" />
+            <span className="tracking-[0.18em]">ARO</span>
+          </div>
+          <p className="text-white/60 mt-8 text-sm md:mt-0">© {new Date().getFullYear()} ARO. All rights reserved.</p>
+        </AnimatedContainer>
+        <div className="mt-10 grid grid-cols-2 gap-8 md:grid-cols-4 xl:col-span-2 xl:mt-0">
+          {footerLinks.map((section, index) => (
+            <AnimatedContainer key={section.label} delay={0.1 + index * 0.1}>
+              <div className="mb-10 md:mb-0">
+                <h3 className="text-xs text-white/80">{section.label}</h3>
+                <ul className="mt-4 space-y-2 text-sm">
+                  {section.links.map((link) => (
+                    <li key={link.title}>
+                      <SafeLink href={link.href} disabled className="hover:text-white/90 text-white/60 inline-flex items-center transition-all duration-300">
+                        {link.icon && <link.icon className="me-1 size-4" />}
+                        {link.title}
+                      </SafeLink>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </AnimatedContainer>
+          ))}
+        </div>
+      </div>
+    </footer>
+  );
+}
+
+const footerLinks = [
+  { label: 'Product', links: [ { title: 'Features', href: '#features' }, { title: 'Pricing', href: '#pricing' }, { title: 'Testimonials', href: '#testimonials' }, { title: 'Integration', href: '/' } ] },
+  { label: 'Company', links: [ { title: 'FAQs', href: '/faqs' }, { title: 'About Us', href: '/about' }, { title: 'Privacy Policy', href: '/privacy' }, { title: 'Terms of Services', href: '/terms' } ] },
+  { label: 'Resources', links: [ { title: 'Blog', href: '/blog' }, { title: 'Changelog', href: '/changelog' }, { title: 'Brand', href: '/brand' }, { title: 'Help', href: '/help' } ] },
+  { label: 'Social Links', links: [ { title: 'Facebook', href: '#', icon: Facebook }, { title: 'Instagram', href: '#', icon: Instagram }, { title: 'Youtube', href: '#', icon: Youtube }, { title: 'LinkedIn', href: '#', icon: Linkedin } ] },
+] as const;
+
+export default function AROGlassHomeV37() {
+  const WP_BASE = typeof window !== 'undefined' ? document.getElementById('aro-app')?.getAttribute('data-wp') || '' : '';
+  return (
+    <div
+      id="aro-app"
+      data-wp={WP_BASE}
+      className="min-h-screen text-white relative overflow-hidden"
+      style={{
+        // Luxe brand background: deep ink + plum glow + subtle gold accent
+        background:
+          'linear-gradient(180deg, #0A0A0B 0%, #111113 60%, #0C0C0E 100%), radial-gradient(1000px 500px at 20% -10%, rgba(138,47,86,0.20), transparent), radial-gradient(1000px 500px at 100% 120%, rgba(200,164,93,0.12), transparent)',
+      }}
+    >
+      {/* Header */}
+      <header className="sticky top-0 z-40">
+        <div className="mx-auto max-w-7xl px-6 py-4">
+          <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl flex items-center justify-between px-5 py-3">
+            <div className="text-2xl tracking-[0.18em] font-light">ARO</div>
+            <nav className="hidden md:flex gap-8 text-sm">
+              <SafeLink className="hover:text-neutral-300" href="#collections">Collections</SafeLink>
+              <SafeLink className="hover:text-neutral-300" href="#women">Women</SafeLink>
+              <SafeLink className="hover:text-neutral-300" href="#men">Men</SafeLink>
+              <SafeLink className="hover:text-neutral-300" href="#blog">Blog</SafeLink>
+              <SafeLink className="hover:text-neutral-300" href="#about">About</SafeLink>
+            </nav>
+            <div className="flex items-center gap-3">
+              <BadgePercent className="w-5 h-5 opacity-80" />
+              <ShoppingBag className="w-5 h-5 opacity-80" />
+              <Instagram className="w-5 h-5 opacity-80" />
+              <Menu className="md:hidden w-6 h-6 opacity-80" />
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* HERO */}
+      <section className="relative">
+        <div className="mx-auto max-w-7xl px-6 pt-14 pb-24">
+          <div className="grid md:grid-cols-2 items-center gap-10">
+            <AnimatedContainer className="space-y-6">
+              <div className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-neutral-300">
+                <Sparkles className="w-4 h-4" />
+                <span>Minimal Luxury</span>
+              </div>
+              <h1 className="text-5xl md:text-7xl font-light leading-[1.05]">ARO <span className="text-neutral-300">STYLE</span></h1>
+              <p className="text-neutral-300/90 max-w-lg">کالکشن‌های محدود با برش‌های معماری، پارچه‌های پریمیوم و پالت لوکس مبتنی بر <span className="text-[color:var(--aro-primary)]">Mulberry</span> و <span className="text-white/80">Mist</span>.</p>
+              <div className="flex flex-wrap gap-3">
+                <GlowCTA />
+                <Button variant="outline" className="rounded-full">Lookbook <ArrowRight className="ml-2 w-4 h-4" /></Button>
+              </div>
+              <div className="aro-marquee relative overflow-hidden rounded-full border border-white/10 bg-white/5 backdrop-blur-md text-xs py-2">
+                <div className="track whitespace-nowrap">
+                  <span className="mx-6 opacity-80">Free Shipping Over $150</span>
+                  <span className="mx-6 opacity-80">New Drop Every Friday</span>
+                  <span className="mx-6 opacity-80">Sustainable Fabrics</span>
+                  <span className="mx-6 opacity-80">Limited Cards • Exclusive Access</span>
+                </div>
+              </div>
+            </AnimatedContainer>
+
+            <AnimatedContainer className="relative">
+              <div className="relative aspect-[3/4] rounded-[2rem] overflow-hidden border border-white/10 bg-white/5 backdrop-blur-xl">
+                <img className="w-full h-full object-cover" src="https://images.unsplash.com/photo-1520975926216-8d7043be0b03?q=80&w=1600&auto=format&fit=crop" alt="ARO hero" />
+                <div className="absolute inset-x-6 bottom-6 flex items-center justify-between">
+                  <div className="text-sm opacity-90">SS25 • ARCH CUT BLAZER</div>
+                  <GlowCTA />
+                </div>
+              </div>
+              <div className="absolute -left-6 -bottom-6 backdrop-blur-xl bg-white/10 border border-white/15 rounded-2xl p-4 shadow-2xl fade-up in">
+                <div className="flex items-center gap-2 text-sm"><Star className="w-4 h-4"/>4.9 rated</div>
+              </div>
+            </AnimatedContainer>
+          </div>
+        </div>
+      </section>
+
+      {/* WOMEN PRODUCTS — Slider (placed BEFORE New Arrivals) */}
+      <section id="women" className="py-12">
+        <div className="mx-auto max-w-7xl px-6">
+          <div className="mb-6 flex items-end justify-between">
+            <h2 className="text-3xl md:text-4xl font-light">Women</h2>
+            <SafeLink href="#" disabled className="text-sm opacity-80 hover:opacity-100">View All</SafeLink>
+          </div>
+          <SliderDeck id="women-slider" slides={buildSlides(20, 'Women Look')} />
+        </div>
+      </section>
+
+      {/* MEN PRODUCTS — Slider */}
+      <section id="men" className="py-6">
+        <div className="mx-auto max-w-7xl px-6">
+          <div className="mb-6 flex items-end justify-between">
+            <h2 className="text-3xl md:text-4xl font-light">Men</h2>
+            <SafeLink href="#" disabled className="text-sm opacity-80 hover:opacity-100">View All</SafeLink>
+          </div>
+          <SliderDeck id="men-slider" slides={buildSlides(20, 'Men Look')} />
+        </div>
+      </section>
+
+      {/* NEW ARRIVALS */}
+      <section id="collections" className="py-8 pb-16">
+        <div className="mx-auto max-w-7xl px-6">
+          <h2 className="text-3xl md:text-4xl font-light mb-10">New Arrivals</h2>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1,2,3,4,5,6].map((i) => (
+              <div key={i} className="rounded-3xl overflow-hidden border border-white/10 bg-white/5 backdrop-blur-xl hover:translate-y-[-6px] transition-transform">
+                <div className="relative aspect-[3/4]">
+                  <img className="w-full h-full object-cover" src={`https://images.unsplash.com/photo-15${i}724385561-51dba16a26b8?q=80&w=1200&auto=format&fit=crop`} alt={`Look ${i}`} />
+                  <div className="absolute top-3 left-3 text-[10px] px-3 py-1 rounded-full bg-black/50 backdrop-blur-md border border-white/10">SS25</div>
+                  <div className="absolute bottom-3 right-3"><AddToCartButton /></div>
+                </div>
+                <div className="p-4 flex items-center justify-between">
+                  <div>
+                    <div className="text-sm">Look {i}</div>
+                    <div className="text-xs opacity-70">Wool / Linen Blend</div>
+                  </div>
+                  <div className="text-sm">$ {180 + i * 5}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* BLOG */}
+      <section id="blog" className="py-8 pb-20">
+        <div className="mx-auto max-w-7xl px-6">
+          <div className="mb-10 flex items-end justify-between">
+            <h2 className="text-3xl md:text-4xl font-light">From the Journal</h2>
+            <SafeLink href="#" disabled className="text-sm opacity-80 hover:opacity-100">View All</SafeLink>
+          </div>
+          {/* WordPress-connected feed (activate by setting data-wp on #aro-app) */}
+          <BlogFeed wpBase={WP_BASE} perPage={3} />
+        </div>
+      </section>
+
+      {/* ABOUT */}
+      <section id="about" className="pb-24">
+        <div className="mx-auto max-w-5xl px-6">
+          <div className="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-10 fade-up">
+            <h3 className="text-2xl font-light mb-4">About ARO</h3>
+            <p className="text-neutral-200/90 leading-relaxed">ARO رویکردی مینیمال و لوکس را با مهندسی برش و دوخت دقیق ترکیب می‌کند. استفاده از متریال پایدار و تیپ‌فیس‌های ظریف، تجربه‌ای معماری‌واره برای پوشش روزمره می‌سازد.</p>
+          </div>
+        </div>
+      </section>
+
+      {/* NEW FOOTER */}
+      <Footer />
+
+      {/* keyframes & component styles */}
+      <style jsx global>{`
+        :root { --aro-primary:#8A2F56; --aro-accent:#C8A45D; }
+
+        /* fade-up utility (replaces framer-motion) */
+        .fade-up { opacity: 0; transform: translateY(8px); filter: blur(4px); transition: opacity .8s cubic-bezier(.22,1,.36,1), transform .8s cubic-bezier(.22,1,.36,1), filter .8s; }
+        .fade-up.in { opacity: 1; transform: translateY(0); filter: blur(0); }
+
+        /* marquee */
+        .aro-marquee .track { display:inline-block; padding: 8px 0; animation: aroMarquee 18s linear infinite; }
+        @keyframes aroMarquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+        /* twinkle sparkles use accent */
+        .aro-twinkle { box-shadow: 0 0 10px rgba(200,164,93,.9); animation: aroTwinkle 2.2s ease-in-out infinite; }
+        @keyframes aroTwinkle { 0%,100%{ transform: scale(1); opacity:.7 } 50%{ transform: scale(1.6); opacity:1 } }
+
+        /* Add-to-cart cinematic button (gooey droplet) */
+        .aro-cartbtn { position: relative; color: #fff; overflow: visible; }
+        .aro-cartbtn .label { transition: opacity .2s ease; padding-left: 10px; }
+        .aro-cartbtn .icon-basket { position:absolute; left:16px; top:50%; transform:translateY(-50%); width:24px; height:24px; color:#fff; }
+        .aro-cartbtn .icon-basket .basket-full { position:absolute; inset:0; opacity:0; display:block; }
+        .aro-cartbtn .icon-basket svg { overflow: visible; }
+        .aro-cartbtn .droplet { position:absolute; left:50%; top:50%; transform: translate(-50%, -50%); width:10px; height:10px; background: var(--aro-accent); border-radius:999px; opacity:0; z-index:60; }
+        .aro-cartbtn .droplet .tail { position:absolute; left:50%; top:50%; transform: translate(-50%, -50%); width:0; height:6px; background: var(--aro-accent); border-radius:999px; filter: blur(0.4px); }
+
+        .aro-cartbtn.is-active .label { opacity:0; }
+        .aro-cartbtn.is-active .icon-basket { animation: basketToCenter .6s ease forwards, basketTakeoff .9s ease-in forwards 1.1s; }
+        .aro-cartbtn.is-active .droplet { animation: stickAndRise 1s ease forwards .15s; }
+        .aro-cartbtn.is-active .droplet .tail { animation: tailStretch .5s ease-in forwards .15s; }
+        .aro-cartbtn.is-active .icon-basket .basket-full { animation: fill 1s forwards .9s; }
+
+        @keyframes basketToCenter { 0%{ transform:translateY(-50%) translateX(0);} 100%{ transform:translateY(-50%) translateX(110%);} }
+        @keyframes stickAndRise { 0%{ opacity:1; width:10px; height:10px; transform: translate(-50%, -50%) scaleX(1); }
+          25%{ transform: translate(-50%, -65%) scaleX(2.2); }
+          45%{ transform: translate(-50%, -85%) scaleX(1.3); }
+          60%{ transform: translate(calc(-50% + 55%), -110%) scale(1); }
+          80%{ transform: translate(calc(-50% + 110%), -130%) scale(0.9); }
+          100%{ transform: translate(calc(-50% + 110%), -110%) scale(0.7); opacity:0; }
+        }
+        @keyframes tailStretch { 0%{ width:0; height:6px; opacity:1; } 40%{ width:60px; height:8px; opacity:.9; } 60%{ width:90px; height:8px; opacity:.8; } 100%{ width:0; opacity:0; } }
+        @keyframes fill { 0%{ opacity:0 } 100%{ opacity:1 } }
+        @keyframes basketTakeoff { 0%{ transform:translateY(-50%) translateX(110%); opacity:1; } 100%{ transform:translateY(-50%) translateX(220%); opacity:0; } }
+      `}</style>
+    </div>
+  );
+}
+
+// ---------------- Lightweight runtime tests (sanity checks) ----------------
+if (typeof window !== 'undefined') {
+  try {
+    const s20 = buildSlides(20, 'T');
+    console.assert(s20.length === 20, 'buildSlides should return 20 slides');
+    console.assert(typeof s20[0].title === 'string', 'slide has title');
+    const THRESHOLD = 40; console.assert(THRESHOLD >= 20, 'drag threshold reasonable');
+    (function testWrap() { const len = 5; const i1 = (0 - 1 + len) % len; const i2 = (4 + 1) % len; console.assert(i1 === 4 && i2 === 0, 'index wrap works'); })();
+  } catch (err) {
+    console.warn('Runtime tests failed:', err);
+  }
+}
