@@ -1,0 +1,230 @@
+/*
+Theme Name: ARO Glassmorphism Theme
+Theme URI: https://github.com/amirss2/ARO-WordPress-Theme
+Author: Amir
+Author URI: https://github.com/amirss2
+Description: A premium glassmorphism WordPress theme with Elementor support. Features minimal luxury design with deep plum and gold accents, perfect for fashion and e-commerce websites.
+Version: 3.7
+Requires at least: 6.0
+Tested up to: 6.4
+Requires PHP: 7.4
+License: GNU General Public License v2 or later
+License URI: http://www.gnu.org/licenses/gpl-2.0.html
+Text Domain: aro-theme
+Tags: e-commerce, fashion, elementor, glassmorphism, luxury, rtl-language-support
+*/
+
+:root {
+  --aro-primary: #8A2F56;
+  --aro-accent: #C8A45D;
+  --aro-bg-start: #0A0A0B;
+  --aro-bg-mid: #111113;
+  --aro-bg-end: #0C0C0E;
+}
+
+/* Reset and Base Styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: #ffffff;
+  background: linear-gradient(180deg, var(--aro-bg-start) 0%, var(--aro-bg-mid) 60%, var(--aro-bg-end) 100%);
+  position: relative;
+  overflow-x: hidden;
+  min-height: 100vh;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    radial-gradient(1000px 500px at 20% -10%, rgba(138, 47, 86, 0.20), transparent),
+    radial-gradient(1000px 500px at 100% 120%, rgba(200, 164, 93, 0.12), transparent);
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* Typography */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 300;
+  line-height: 1.2;
+}
+
+h1 {
+  font-size: clamp(2.5rem, 6vw, 4.5rem);
+}
+
+h2 {
+  font-size: clamp(2rem, 4vw, 3rem);
+}
+
+h3 {
+  font-size: clamp(1.5rem, 3vw, 2rem);
+}
+
+/* Glassmorphism Utility Classes */
+.glass-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 1.5rem;
+}
+
+.glass-button {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.glass-button:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.05);
+}
+
+/* Fade-up Animation */
+.fade-up {
+  opacity: 0;
+  transform: translateY(8px);
+  filter: blur(4px);
+  transition: opacity 0.8s cubic-bezier(0.22, 1, 0.36, 1),
+              transform 0.8s cubic-bezier(0.22, 1, 0.36, 1),
+              filter 0.8s;
+}
+
+.fade-up.in {
+  opacity: 1;
+  transform: translateY(0);
+  filter: blur(0);
+}
+
+/* Marquee Animation */
+.aro-marquee {
+  overflow: hidden;
+  position: relative;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  font-size: 0.875rem;
+  padding: 0.5rem 0;
+}
+
+.aro-marquee .track {
+  display: inline-block;
+  padding: 0.5rem 0;
+  animation: aroMarquee 18s linear infinite;
+  white-space: nowrap;
+}
+
+@keyframes aroMarquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* Twinkle Sparkles */
+.aro-twinkle {
+  box-shadow: 0 0 10px rgba(200, 164, 93, 0.9);
+  animation: aroTwinkle 2.2s ease-in-out infinite;
+}
+
+@keyframes aroTwinkle {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scale(1.6);
+    opacity: 1;
+  }
+}
+
+/* Container */
+.container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  body {
+    font-size: 14px;
+  }
+  
+  .container {
+    padding: 0 1rem;
+  }
+}
+
+/* RTL Support */
+body.rtl {
+  direction: rtl;
+  text-align: right;
+}
+
+/* WordPress Core Styles */
+.alignleft {
+  float: left;
+  margin-right: 1.5rem;
+}
+
+.alignright {
+  float: right;
+  margin-left: 1.5rem;
+}
+
+.aligncenter {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.wp-caption {
+  max-width: 100%;
+}
+
+.wp-caption-text {
+  text-align: center;
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  opacity: 0.8;
+}
+
+.screen-reader-text {
+  clip: rect(1px, 1px, 1px, 1px);
+  position: absolute !important;
+  height: 1px;
+  width: 1px;
+  overflow: hidden;
+}
+
+/* Elementor Compatibility */
+.elementor-widget-container {
+  color: inherit;
+}
+
+.elementor-section {
+  position: relative;
+}

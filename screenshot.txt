@@ -1,0 +1,20 @@
+Screenshot Information
+======================
+
+This theme requires a screenshot.png file (1200x900px) to display in the WordPress theme selector.
+
+To create a screenshot:
+1. Install and activate the theme
+2. Take a screenshot of the homepage
+3. Crop to 1200x900 pixels
+4. Save as screenshot.png in the theme root directory
+
+The screenshot should showcase:
+- Hero section with glassmorphism design
+- Navigation header
+- Product sliders
+- Overall aesthetic and color scheme
+
+Recommended tool: Any image editor or online tool like Canva
+File format: PNG
+Dimensions: 1200 x 900 pixels (4:3 ratio)
